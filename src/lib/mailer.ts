@@ -15,13 +15,43 @@ export const mailer = nodemailer.createTransport({
 });
 
 async function sendViaHttpApi(to: string, code: string): Promise<boolean> {
+  const brevoKey = process.env.BREVO_API_KEY;
+  if (brevoKey) {
+    try {
+      const senderEmail = env.GMAIL_USER || "10.rammehta@gmail.com";
+      console.log(`[Brevo] Sending OTP to ${to} from ${senderEmail}`);
+      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "api-key": brevoKey.trim(),
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          sender: { name: "DropU", email: senderEmail },
+          to: [{ email: to }],
+          subject: `Your DropU Verification Code: ${code}`,
+          htmlContent: buildHtml(code),
+        }),
+      });
+      const responseText = await res.text();
+      console.log(`[Brevo Response] status=${res.status}: ${responseText}`);
+      if (res.ok) return true;
+      throw new Error(`Brevo API error (${res.status}): ${responseText}`);
+    } catch (err) {
+      console.error("[Brevo Exception]", err);
+      throw err;
+    }
+  }
+
   const resendKey = process.env.RESEND_API_KEY;
   if (resendKey) {
     try {
+      console.log(`[Resend] Sending OTP to ${to}`);
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${resendKey}`,
+          Authorization: `Bearer ${resendKey.trim()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -32,36 +62,19 @@ async function sendViaHttpApi(to: string, code: string): Promise<boolean> {
           text: `Your DropU verification code is ${code}. It expires in 5 minutes.`,
         }),
       });
-      return res.ok;
-    } catch {
-      return false;
-    }
-  }
-
-  const brevoKey = process.env.BREVO_API_KEY;
-  if (brevoKey) {
-    try {
-      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-        method: "POST",
-        headers: {
-          "api-key": brevoKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sender: { name: "DropU", email: env.GMAIL_USER || "noreply@dropu.app" },
-          to: [{ email: to }],
-          subject: `Your DropU Verification Code: ${code}`,
-          htmlContent: buildHtml(code),
-        }),
-      });
-      return res.ok;
-    } catch {
-      return false;
+      const responseText = await res.text();
+      console.log(`[Resend Response] status=${res.status}: ${responseText}`);
+      if (res.ok) return true;
+      throw new Error(`Resend API error (${res.status}): ${responseText}`);
+    } catch (err) {
+      console.error("[Resend Exception]", err);
+      throw err;
     }
   }
 
   return false;
 }
+
 
 function buildHtml(code: string): string {
   return `

@@ -23,6 +23,18 @@ function generateOtp(): string {
   return code;
 }
 
+otpRouter.get("/diag", (c) => {
+  return c.json({
+    status: "ok",
+    hasBrevo: !!process.env.BREVO_API_KEY,
+    brevoPrefix: process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim().slice(0, 10) + "..." : null,
+    hasResend: !!process.env.RESEND_API_KEY,
+    resendPrefix: process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.trim().slice(0, 6) + "..." : null,
+    hasGmailUser: !!process.env.GMAIL_USER,
+    gmailUser: process.env.GMAIL_USER || null,
+  });
+});
+
 otpRouter.post(
   "/send",
   zValidator("json", z.object({ email: z.string().email() })),
