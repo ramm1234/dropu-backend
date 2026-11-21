@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model messages {
+  id          String @id
+  rideId      String
+  senderPhone String
+  senderName  String
+  text        String
+  createdAt   String
+  rides       rides  @relation(fields: [rideId], references: [id])
+
+  @@index([rideId])
+}
+
+model ride_requests {
+  id                        String  @id
+  rideId                    String
+  userName                  String
+  userPhone                 String?
+  userAge                   Int?
+  userRating                Float?
+  fromLocation              String
+  toLocation                String
+  departureTime             String?
+  arrivalTime               String?
+  durationHours             Int?
+  tripType                  String?
+  category                  String?
+  totalPrice                Float?
+  date                      String?
+  status                    String  @default("pending")
+  createdAt                 String
+  acceptedAt                String?
+  cancellationFeeApplicable Boolean @default(false)
+  cancelledBy               String?
+  endedAt                   String?
+  finalPrice                Float?
+  lateCancellation          Boolean @default(false)
+  priceBreakdown            String?
+  rideCode                  String?
+  startedAt                 String?
+  tripStatus                String  @default("not_started")
+  rides                     rides   @relation(fields: [rideId], references: [id])
+
+  @@index([rideId])
+}
+
+model rides {
+  id              String          @id
+  driverPhone     String
+  driverName      String
+  category        String
+  tripType        String
+  cars            String
+  hours           Int
+  date            String
+  pricePerHour    Int
+  pickupDate      String
+  dropoffDate     String
+  fromLocation    String          @default("")
+  createdAt       String
+  carNumber       String?
+  alwaysAvailable Boolean         @default(false)
+  messages        messages[]
+  ride_requests   ride_requests[]
+
+  @@index([carNumber])
+}
+
+model users {
+  phone                 String  @id
+  fullName              String
+  email                 String  @unique
+  dateOfBirth           String?
+  avatarUrl             String?
+  bio                   String?
+  vehicleModel          String?
+  vehicleColor          String?
+  vehicleNumber         String?
+  role                  String
+  createdAt             String
+  lateCancellationCount Int     @default(0)
+}

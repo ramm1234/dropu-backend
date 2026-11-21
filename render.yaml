@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: dropu-backend
+    runtime: docker
+    plan: free
+    region: oregon
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: DATABASE_URL
+        value: file:./dropu.db
+      - key: GMAIL_USER
+        value: 10.rammehta@gmail.com
+      - key: GMAIL_APP_PASSWORD
+        value: tahrvlmmexzpeztx

@@ -1,0 +1,74 @@
+import { Hono } from "hono";
+import { zValidator } from "@hono/zod-validator";
+import { z } from "zod";
+import { sendOtpEmail } from "../lib/mailer";
+
+const otpRouter = new Hono();
+
+type OtpEntry = {
+  otp: string;
+  expiresAt: number;
+};
+
+const otpStore = new Map<string, OtpEntry>();
+
+const OTP_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const OTP_LENGTH = 6;
+
+function generateOtp(): string {
+  let code = "";
+  for (let i = 0; i < OTP_LENGTH; i++) {
+    code += Math.floor(Math.random() * 10);
+  }
+  return code;
+}
+
+otpRouter.post(
+  "/send",
+  zValidator("json", z.object({ email: z.string().email() })),
+  async (c) => {
+    const { email } = c.req.valid("json");
+
+    const otp = generateOtp();
+    const expiresAt = Date.now() + OTP_TTL_MS;
+
+    try {
+      await sendOtpEmail(email, otp);
+      otpStore.set(email, { otp, expiresAt });
+      return c.json({
+        data: {
+          sent: true,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to send OTP email to", email, ":", err);
+      return c.json(
+        { error: { message: "Failed to send verification email. Please check your email address and try again.", code: "EMAIL_FAILED" } },
+        502
+      );
+    }
+  }
+);
+
+otpRouter.post(
+  "/verify",
+  zValidator("json", z.object({ email: z.string().email(), otp: z.string() })),
+  (c) => {
+    const { email, otp } = c.req.valid("json");
+
+    const entry = otpStore.get(email);
+
+    if (!entry || entry.otp !== otp || Date.now() > entry.expiresAt) {
+      return c.json(
+        { error: { message: "Invalid or expired OTP", code: "INVALID_OTP" } },
+        400
+      );
+    }
+
+    otpStore.delete(email);
+
+    return c.json({ data: { verified: true } });
+  }
+);
+
+export { otpRouter };
