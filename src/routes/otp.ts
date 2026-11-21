@@ -52,13 +52,15 @@ otpRouter.post(
           sent: true,
         },
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to send OTP email to", email, ":", err);
+      const detail = err?.message || String(err);
       return c.json(
-        { error: { message: "Failed to send verification email. Please check your email address and try again.", code: "EMAIL_FAILED" } },
+        { error: { message: `Failed to send verification email: ${detail}`, code: "EMAIL_FAILED", detail } },
         502
       );
     }
+
   }
 );
 
