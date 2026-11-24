@@ -14,12 +14,35 @@ export const mailer = nodemailer.createTransport({
   socketTimeout: 6000,
 });
 
+let cachedBrevoSender: string | null = null;
+
+async function getBrevoSender(apiKey: string): Promise<string> {
+  if (cachedBrevoSender) return cachedBrevoSender;
+  try {
+    const res = await fetch("https://api.brevo.com/v3/senders", {
+      headers: { "api-key": apiKey.trim(), "Accept": "application/json" },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const active = data?.senders?.find((s: any) => s.active)?.email;
+      if (active) {
+        cachedBrevoSender = active;
+        console.log(`[Brevo] Using verified sender from Brevo: ${cachedBrevoSender}`);
+        return cachedBrevoSender;
+      }
+    }
+  } catch (err) {
+    console.warn("[Brevo] Could not fetch verified senders list:", err);
+  }
+  return process.env.BREVO_SENDER_EMAIL || "ramm59026@gmail.com";
+}
+
 async function sendViaHttpApi(to: string, code: string): Promise<boolean> {
   const brevoKey = process.env.BREVO_API_KEY;
   if (brevoKey) {
     try {
-      const senderEmail = env.GMAIL_USER || "10.rammehta@gmail.com";
-      console.log(`[Brevo] Sending OTP to ${to} from ${senderEmail}`);
+      const senderEmail = await getBrevoSender(brevoKey);
+      console.log(`[Brevo] Sending OTP to ${to} from verified sender: ${senderEmail}`);
       const res = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         headers: {
@@ -43,6 +66,7 @@ async function sendViaHttpApi(to: string, code: string): Promise<boolean> {
       throw err;
     }
   }
+
 
   const resendKey = process.env.RESEND_API_KEY;
   if (resendKey) {
