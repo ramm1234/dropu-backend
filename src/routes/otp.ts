@@ -35,6 +35,35 @@ otpRouter.get("/diag", (c) => {
   });
 });
 
+otpRouter.get("/brevo-status", async (c) => {
+  const brevoKey = process.env.BREVO_API_KEY?.trim();
+  if (!brevoKey) {
+    return c.json({ error: "BREVO_API_KEY not configured" }, 400);
+  }
+
+  const headers = {
+    "api-key": brevoKey,
+    "Accept": "application/json",
+  };
+
+  try {
+    const [accountRes, sendersRes, eventsRes] = await Promise.all([
+      fetch("https://api.brevo.com/v3/account", { headers }).then((r) => r.json()).catch((e) => ({ error: e.message })),
+      fetch("https://api.brevo.com/v3/senders", { headers }).then((r) => r.json()).catch((e) => ({ error: e.message })),
+      fetch("https://api.brevo.com/v3/smtp/statistics/events?limit=15&sort=desc", { headers }).then((r) => r.json()).catch((e) => ({ error: e.message })),
+    ]);
+
+    return c.json({
+      account: accountRes,
+      senders: sendersRes,
+      events: eventsRes,
+    });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+
 otpRouter.post(
   "/send",
   zValidator("json", z.object({ email: z.string().email() })),
