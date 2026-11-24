@@ -52,10 +52,13 @@ async function sendViaHttpApi(to: string, code: string): Promise<boolean> {
         },
         body: JSON.stringify({
           sender: { name: "DropU", email: senderEmail },
+          replyTo: { name: "DropU Support", email: senderEmail },
           to: [{ email: to }],
-          subject: `Your DropU Verification Code: ${code}`,
+          subject: `${code} is your DropU verification code`,
           htmlContent: buildHtml(code),
+          textContent: `Your DropU verification code is ${code}. It expires in 5 minutes. Never share this code with anyone.\n\n© ${new Date().getFullYear()} DropU`,
         }),
+
       });
       const responseText = await res.text();
       console.log(`[Brevo Response] status=${res.status}: ${responseText}`);
