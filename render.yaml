@@ -8,7 +8,9 @@ services:
       - key: PORT
         value: 3001
       - key: DATABASE_URL
-        value: file:./dropu.db
+        value: postgresql://postgres.zjkevakvzjlgfraowwao:Uetroleum%40123@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+      - key: DIRECT_URL
+        value: postgresql://postgres.zjkevakvzjlgfraowwao:Uetroleum%40123@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres
       - key: GMAIL_USER
         value: 10.rammehta@gmail.com
       - key: GMAIL_APP_PASSWORD

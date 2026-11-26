@@ -34,7 +34,7 @@ app.get("/", (c) =>
     app: "DropU API",
     status: "ok",
     version: "1.0.0",
-    message: "DropU backend is running and connected to SQLite database.",
+    message: "DropU backend is running and connected to Supabase PostgreSQL database.",
   })
 );
 

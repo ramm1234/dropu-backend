@@ -13,14 +13,10 @@ RUN bunx prisma generate
 # Copy all source files
 COPY . .
 
-# Ensure SQLite database is initialized and seeded
-RUN bunx prisma db push && bun run src/seed.ts
-
 # Expose default backend port
 EXPOSE 3001
 
 ENV PORT=3001
-ENV DATABASE_URL="file:./dropu.db"
 
-# Start Hono backend server
-CMD ["bun", "run", "src/index.ts"]
+# Run migrations/push and start Hono backend server
+CMD ["sh", "-c", "bunx prisma db push --accept-data-loss && bun run src/seed.ts && bun run src/index.ts"]
