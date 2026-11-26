@@ -62,11 +62,82 @@ ridesRouter.get("/search", async (c) => {
 ridesRouter.get("/driver", async (c) => {
   const phone = c.req.query("phone");
   if (!phone) return c.json({ error: { message: "phone required" } }, 400);
+  const normalizedPhone = phone.replace(/\D/g, "");
+  const last10 = normalizedPhone.slice(-10);
+
   const rows = await prisma.rides.findMany({
-    where: { driverPhone: phone },
+    where: {
+      OR: [
+        { driverPhone: phone },
+        { driverPhone: `+${normalizedPhone}` },
+        { driverPhone: normalizedPhone },
+        ...(last10.length === 10 ? [{ driverPhone: { endsWith: last10 } }] : []),
+      ],
+    },
     orderBy: { createdAt: "desc" },
   });
   return c.json({ data: rows.map(serializeRide) });
+});
+
+// GET /api/rides/passenger?phone= — get all rides booked by a specific passenger
+ridesRouter.get("/passenger", async (c) => {
+  const phone = c.req.query("phone");
+  if (!phone) return c.json({ error: { message: "phone required" } }, 400);
+  const normalizedPhone = phone.replace(/\D/g, "");
+  const last10 = normalizedPhone.slice(-10);
+
+  const requests = await prisma.ride_requests.findMany({
+    where: {
+      OR: [
+        { userPhone: phone },
+        { userPhone: `+${normalizedPhone}` },
+        { userPhone: normalizedPhone },
+        ...(last10.length === 10 ? [{ userPhone: { endsWith: last10 } }] : []),
+      ],
+      status: { not: "cancelled" },
+    },
+    include: {
+      rides: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const passengerRides = requests.map((req) => ({
+    id: req.id,
+    bookingId: req.id,
+    from: req.fromLocation,
+    to: req.toLocation,
+    date: req.date || req.createdAt,
+    departureTime: req.departureTime || "10:00",
+    arrivalTime: req.arrivalTime || "17:00",
+    duration: req.durationHours ? `${req.durationHours}hr` : "2hr",
+    tripType: (req.tripType as any) || "Oneway",
+    category: (req.category as any) || "Intercity",
+    status: req.status === "accepted" ? "booked" : "request_created",
+    pickupLocation: req.fromLocation,
+    dropLocation: req.toLocation,
+    driverRideId: req.rideId,
+    requestId: req.id,
+    isAccepted: req.status === "accepted",
+    driver: req.rides
+      ? {
+          id: req.rides.id,
+          name: req.rides.driverName,
+          age: 30,
+          experience: 5,
+          rating: 4.8,
+          reviewCount: 24,
+          price: req.totalPrice ?? req.rides.pricePerHour,
+          verified: true,
+          phone: req.rides.driverPhone,
+          avatarInitials: req.rides.driverName
+            ? req.rides.driverName.slice(0, 2).toUpperCase()
+            : "DR",
+        }
+      : undefined,
+  }));
+
+  return c.json({ data: passengerRides });
 });
 
 const requestSchema = z.object({
