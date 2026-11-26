@@ -23,12 +23,12 @@ async function getBrevoSender(apiKey: string): Promise<string> {
       headers: { "api-key": apiKey.trim(), "Accept": "application/json" },
     });
     if (res.ok) {
-      const data = await res.json();
+      const data = (await res.json()) as any;
       const active = data?.senders?.find((s: any) => s.active)?.email;
       if (active) {
         cachedBrevoSender = active;
         console.log(`[Brevo] Using verified sender from Brevo: ${cachedBrevoSender}`);
-        return cachedBrevoSender;
+        return active;
       }
     }
   } catch (err) {
