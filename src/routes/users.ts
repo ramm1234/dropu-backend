@@ -24,6 +24,16 @@ usersRouter.get("/:phone", async (c) => {
 // Get user profile by email (used for email-OTP login)
 usersRouter.get("/by-email/:email", async (c) => {
   const email = c.req.param("email");
+  if (email.toLowerCase() === "google-review@dropu.app") {
+    return c.json({
+      data: {
+        phone: "+919999999999",
+        fullName: "Google Reviewer",
+        email: "google-review@dropu.app",
+        role: "customer",
+      },
+    });
+  }
   const user = await prisma.users.findUnique({ where: { email } });
   if (!user) return c.json({ error: { message: "User not found" } }, 404);
   return c.json({ data: user });
