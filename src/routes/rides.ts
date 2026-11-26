@@ -123,6 +123,16 @@ ridesRouter.get("/:id/requests", async (c) => {
   return c.json({ data: rows });
 });
 
+// GET /api/rides/:rideId/requests/:requestId — passenger checks status of their booking request
+ridesRouter.get("/:rideId/requests/:requestId", async (c) => {
+  const { rideId, requestId } = c.req.param();
+  const req = await prisma.ride_requests.findFirst({
+    where: { id: requestId, rideId },
+  });
+  if (!req) return c.json({ error: { message: "Request not found" } }, 404);
+  return c.json({ data: req });
+});
+
 // PATCH /api/rides/:rideId/requests/:requestId/accept — driver accepts a request
 ridesRouter.patch("/:rideId/requests/:requestId/accept", async (c) => {
   const { rideId, requestId } = c.req.param();
