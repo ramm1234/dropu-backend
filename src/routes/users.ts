@@ -109,4 +109,60 @@ usersRouter.patch(
   }
 );
 
+// Delete user and purge all associated personal data permanently
+usersRouter.delete("/:phone", async (c) => {
+  const phone = c.req.param("phone");
+  const existing = await prisma.users.findUnique({ where: { phone } });
+  if (!existing) {
+    return c.json({ error: { message: "User not found" } }, 404);
+  }
+
+  try {
+    // 1. Find all rides hosted by this user (if driver)
+    const userRides = await prisma.rides.findMany({
+      where: { driverPhone: phone },
+      select: { id: true },
+    });
+    const userRideIds = userRides.map((r) => r.id);
+
+    // 2. Delete messages sent by user or on their rides
+    await prisma.messages.deleteMany({
+      where: {
+        OR: [
+          { senderPhone: phone },
+          ...(userRideIds.length > 0 ? [{ rideId: { in: userRideIds } }] : []),
+        ],
+      },
+    });
+
+    // 3. Delete ride requests created by user or on their rides
+    await prisma.ride_requests.deleteMany({
+      where: {
+        OR: [
+          { userPhone: phone },
+          ...(userRideIds.length > 0 ? [{ rideId: { in: userRideIds } }] : []),
+        ],
+      },
+    });
+
+    // 4. Delete driver rides
+    if (userRideIds.length > 0) {
+      await prisma.rides.deleteMany({
+        where: { id: { in: userRideIds } },
+      });
+    }
+
+    // 5. Delete user record
+    await prisma.users.delete({
+      where: { phone },
+    });
+
+    return c.json({ data: { success: true, message: "Account and associated data deleted permanently." } });
+  } catch (err: any) {
+    console.error("Failed to delete user account:", err);
+    return c.json({ error: { message: "Failed to delete account. Please try again." } }, 500);
+  }
+});
+
 export { usersRouter };
+
